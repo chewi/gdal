@@ -229,7 +229,22 @@ int OGRMDBJavaEnv::Init()
             JavaVMInitArgs args;
             JavaVMOption options[1];
             args.version = JNI_VERSION_1_2;
-            const char* pszClassPath = CPLGetConfigOption("CLASSPATH", NULL);
+
+            const char* pszClassPath = NULL;
+            javaCmd = popen("java-config --with-dependencies --classpath=jackcess-1", "r");
+
+            if (javaCmd != NULL)
+            {
+                pszClassPath = CPLReadLine(javaCmd);
+                ret = pclose(javaCmd);
+
+                if (ret != 0)
+                    pszClassPath = NULL;
+            }
+
+            if (pszClassPath == NULL)
+                pszClassPath = CPLGetConfigOption("CLASSPATH", NULL);
+
             char* pszClassPathOption = NULL;
             if (pszClassPath)
             {
@@ -241,6 +256,9 @@ int OGRMDBJavaEnv::Init()
             else
                 args.nOptions = 0;
             args.ignoreUnrecognized = JNI_FALSE;
+
+            if (javaCmd != NULL)
+                CPLReadLine(NULL);
 
 #if JVM_LIB_DLOPEN
             jint (*pfnJNI_CreateJavaVM)(JavaVM **, void **, void *);
